@@ -50,5 +50,14 @@ Router.post("/signin", async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 });
+Router.post("/logout", async (req, res) => {
+    try {
+        
+        await UserModel.findByIdAndUpdate(req.user._id, { isLoggedIn: false });
 
+        return res.status(200).json({ status: "success" });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+});
 export default Router;

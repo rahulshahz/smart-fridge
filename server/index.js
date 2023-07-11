@@ -3,99 +3,76 @@ require("dotenv").config();
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cron from "node-cron";
 
-//Routes
+// Routes
 import Auth from "./API/Auth";
 import Items from "./API/Items";
 
-//Databse Connection
+// Database Connection
 import ConnectDB from "./database/connection";
+import { UserModel } from "./database/user/index";
+import { FridgeModel } from "./database/fridge/index";
+import details from "./API/mail";
 
-//to initialize express in zomato
 const app = express();
-import itemsRoutes from "./API/Items/index.js"
-import cron from "node-cron";
-import { UserModel } from "./database/user/index"
-import { FridgeModel } from "./database/fridge/index"
-import details from "./API/mail"
+const port = 4001;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 app.use(helmet());
-app.use('/', itemsRoutes)
 
-//route
-app.get("/", (req, res) => {
-    res.json({ message: "Setup Success" });
-});
-
+// Routes
 app.use("/auth", Auth);
 app.use("/", Items);
 
-//Email Scheduler
-cron.schedule('0 * * * * *', async () => {
-    console.log("scheduler running...")
-	UserModel.find({}, (err, users) => {
-        if(err){
-            console.log("No User in user table")
-        }else{
-            users.map(allUser => {
-                FridgeModel.findOne({user : allUser._id}, (err, reqUser) => {
-                            if(reqUser !== null){
-                                console.log(reqUser.user)
-                                try{
-                                    reqUser.food.map(items => {
-                                        const expDate = items.date;
-                                        const curr = new Date();
-                                        
-                                        const newExp = new Date(expDate - 3*24*60*60*1000);  
-                                        
-                                        if(curr >= newExp){
-                                            console.log(`${items.name} expired`)
-                                            UserModel.findById({_id : reqUser.user}, (error, res) => {
-                                                if(error){
-                                                    console.log("No User")
-                                                }else{
-                                                    details.mDetails.to = res.email;
-                                                    details.mDetails.text = `{Your ${items.name} are about to expire on ${expDate}, To find the receipes on ${items.name} visit your EatIt account}`
-                                                    details.mTransporter.sendMail(details.mDetails, function(errs, data){
-                                                        console.log("before")
-                                                        if(errs) {
-                                                            console.log('Error Occurs' + errs );
-                                                        }else {
-                                                            console.log('Email sent : ' + data.response);
-                                                        }
-                                                        console.log("after")
-                                                    });
-                                                }
-                                            })
-                                        }
-                                            else{
-                                            console.log(`${items.name} not expired`)
-                                        }
-                                    })
-                                }
-                                catch(e){
-                                    console.log("Error caught in try catch")
-                                }
-                            }else{
-                                console.log("No user in fridge table")
-                            }
-                });
-            });
-           
-        }      
-        
-    });
+// Email Scheduler
+cron.schedule('* * * * *', async () => {
+    console.log("Scheduler running...");
+    try {
+        const users = await UserModel.find();
+        if (users.length === 0) {
+            console.log("No users in the user table");
+            return;
+        }
 
+        for (const user of users) {
+            const fridge = await FridgeModel.findOne({ user: user._id });
+            if (fridge === null) {
+                console.log("No user in the fridge table");
+                continue;
+            }
+
+            for (const item of fridge.food) {
+                const expDate = item.date;
+                const curr = new Date();
+                const newExp = new Date(expDate - 3 * 24 * 60 * 60 * 1000);
+
+                if (curr >= newExp) {
+                    console.log(`${item.name} expired`);
+
+                    details.mDetails.to = user.email;
+                    details.mDetails.text = `Your ${item.name} is about to expire on ${expDate}. To find recipes using ${item.name}, visit your EatIt account.`;
+
+                    details.mTransporter.sendMail(details.mDetails, (err, data) => {
+                        if (err) {
+                            console.log('Error occurred:', err);
+                        } else {
+                            console.log('Email sent:', data.response);
+                        }
+                    });
+                } else {
+                    console.log(`${item.name} not expired`);
+                }
+            }
+        }
+    } catch (error) {
+        console.log("Error occurred:", error);
+    }
 });
 
-app.listen(
-    4001,
-    ConnectDB()
-        .then(() => console.log("Server is up and running"))
-        .catch(() =>
-            console.log("Server is running, but database connection failed .")
-        )
-);
+app.listen(port, async () => {
+    await ConnectDB();
+    console.log(`Server is up and running on port ${port}`);
+});

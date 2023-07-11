@@ -1,27 +1,26 @@
-import { UserModel} from "./Auth/index";
-import { ItemsModel } from "./Items/index";
-import nodemailer from "nodemailer";
-import cron from "node-cron";
+const { UserModel } = require('./Auth/index');
+const { ItemsModel } = require('./Items/index');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 const mailTransporter = nodemailer.createTransport({
 	service: 'gmail',
 	auth: {
-		user: 'yohangupta123@gmail.com',
-		pass: 'Ridergom&!89'
+		user: 'rahulshah.t4p@gmail.com',
+		pass: 'rahulrahul'
 	}
 });
 
 const mailDetails = {
-	from: 'yohangupta123@gmail.com',
+	from: 'rahulshah.t4p@gmail.com',
 	to: '',
 	subject: '',
 	text: ''
 };
 
 const details = {
-    mTransporter : mailTransporter,
-    mDetails : mailDetails    
-}
+	mTransporter: mailTransporter,
+	mDetails: mailDetails
+};
 
-// export default details;
-module.exports = details
+module.exports = details;

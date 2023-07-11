@@ -32,7 +32,7 @@ const Navbar = () => {
     <div className="navbar">
       <div className="logo">
         {/* <img src={require("../images/Logo.gif")} alt="logo" /> */}
-        <h2>EatIt</h2>
+        <h2>FreshEye</h2>
       </div>
 
       <div className="nav-links">
